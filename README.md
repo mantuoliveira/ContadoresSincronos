@@ -1,4 +1,4 @@
-# Contador — Sistemas Digitais 1
+# Contador — Sistemas Digitais I
 
 Abra **index.html** no navegador. Não há instalação, dependências, build, fontes externas ou acesso à rede. Mantenha `index.html`, `style.css`, `logic.js` e `app.js` na mesma pasta.
 
