@@ -44,8 +44,9 @@ for (let n = 1; n <= 4; n++) for (const type of ['D','JK']) {
 }
 // Exercise the same event handlers as the UI without a browser or dependencies.
 const elements = new Map(), registrations = [];
+const timers = new Map(); let timerId = 0;
 const element = id => { if (!elements.has(id)) elements.set(id,{innerHTML:'',textContent:'',value:'',handlers:{},addEventListener(name,fn){this.handlers[name]=fn;},focus(){}}); return elements.get(id); };
-const context = vm.createContext({CounterLogic:L,document:{getElementById:element,querySelector:()=>({focus(){}}),modelContext:{registerTool(tool){registrations.push(tool);}}},window:{addEventListener(){}},AbortController});
+const context = vm.createContext({CounterLogic:L,document:{getElementById:element,querySelector:()=>({focus(){}}),modelContext:{registerTool(tool){registrations.push(tool);}}},window:{addEventListener(){}},setTimeout(fn,delay){const id=++timerId; timers.set(id,{fn,delay}); return id;},clearTimeout(id){timers.delete(id);},AbortController});
 vm.runInContext(fs.readFileSync('app.js','utf8'),context);
 assert.equal(registrations.length,1);
 const tool = registrations[0];
@@ -72,4 +73,107 @@ assert.equal(vm.runInContext('result.equations.length',context),2);
 element('bits').handlers.change({target:{value:'4'}});
 element('bits').handlers.change({target:{value:'1'}});
 assert.equal(vm.runInContext('table[0][0]',context),0);
-console.log(`OK: ${checked} funções com mínimo conferido por algoritmo independente; 1.600 contadores aleatórios; contagem binária, indiferenças, controles e contrato WebMCP.`);
+// Classroom orientation: rows Qa,Qb and columns Qc,Qd, not binary significance order.
+const expectedMaps = {
+  1:[[0],[1]],
+  2:[[0],[2],[3],[1]],
+  3:[[0,4],[2,6],[3,7],[1,5]],
+  4:[[0,8,12,4],[2,10,14,6],[3,11,15,7],[1,9,13,5]]
+};
+for (let bits=1;bits<=4;bits++) {
+  const layout = vm.runInContext(`mapLayout(${bits})`,context);
+  assert.deepEqual(JSON.parse(JSON.stringify(layout.states)),expectedMaps[bits]);
+  const rows=layout.states.length, cols=layout.states[0].length;
+  const oneBit = v => v !== 0 && (v & (v-1)) === 0;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++) {
+    if(rows>1) assert(oneBit(layout.states[r][c]^layout.states[(r+1)%rows][c]));
+    if(cols>1) assert(oneBit(layout.states[r][c]^layout.states[r][(c+1)%cols]));
+  }
+}
+for (const flipFlop of ['D','JK']) {
+  element('bits').handlers.change({target:{value:'4'}});
+  element('type').handlers.change({target:{value:flipFlop}});
+  element('example').handlers.click();
+  assert.match(element('example').textContent,/módulo 10/);
+  assert.deepEqual(Array.from(vm.runInContext('result.nextStates.slice(0,10)',context)),[1,2,3,4,5,6,7,8,9,0]);
+  assert(vm.runInContext('table.slice(10).every(row => row.every(v => v === -1))',context));
+  // Verify every product group for every input, and that a second click clears it.
+  const equations = vm.runInContext('result.equations',context);
+  for(const e of equations) for(let i=0;i<e.terms.length;i++) {
+    const termButton = {dataset:{entry:e.name,equationTerm:String(i)}};
+    element('equations').handlers.click({target:{closest:selector => selector === '[data-equation-term]' ? termButton : null}});
+    const selectedCells = Array.from(element('kmap').innerHTML.matchAll(/data-map-state="(\d+)" class="[^"]*in-group/g),m=>Number(m[1])).sort((a,b)=>a-b);
+    const expected = Array.from({length:16},(_,s)=>s).filter(s=>L.matches(e.terms[i],s));
+    assert.deepEqual(selectedCells,expected);
+    assert.match(element('groups').innerHTML,new RegExp(`${expected.length} células destacadas`));
+    const groupButton={dataset:{term:String(i)}};
+    element('groups').handlers.click({target:{closest:()=>groupButton}});
+    assert(!element('kmap').innerHTML.includes('in-group'));
+    element('groups').handlers.click({target:{closest:()=>groupButton}});
+    assert.equal((element('kmap').innerHTML.match(/in-group/g)||[]).length,expected.length);
+    // Reset before testing next term so each first click always selects.
+    element('groups').handlers.click({target:{closest:()=>groupButton}});
+  }
+}
+// Direct map selection: overlapping groups, clear, and cells outside all groups.
+tool.execute({bits:2,flipFlop:'D',nextBits:[[0,0],[1,0],[1,0],[1,0]]});
+vm.runInContext("selectEquation('Da')",context);
+const unchangedTable = vm.runInContext('JSON.stringify(table)',context);
+const mapClick = state => element('kmap').handlers.click({target:{closest:()=>({dataset:{mapCell:String(state)}})}});
+mapClick(3); assert.equal(vm.runInContext('selectedTerm',context),0);
+mapClick(3); assert.equal(vm.runInContext('selectedTerm',context),1);
+assert.equal((element('kmap').innerHTML.match(/in-group/g)||[]).length,2);
+mapClick(3); assert.equal(vm.runInContext('selectedTerm',context),-1);
+mapClick(1); assert(vm.runInContext('selectedTerm >= 0',context));
+mapClick(1); assert.equal(vm.runInContext('selectedTerm',context),-1);
+mapClick(0); assert.match(element('groups').innerHTML,/não pertence a nenhum grupo/);
+assert.equal(vm.runInContext('JSON.stringify(table)',context),unchangedTable);
+// Simulated clock uses the computed sequence, not a numeric increment.
+const custom = Array.from({length:16},(_,s)=>Array.from({length:4},(_,i)=>L.bit(({0:10,10:11,11:13,13:15,15:0})[s] ?? s,i)));
+tool.execute({bits:4,flipFlop:'D',nextBits:custom});
+const chooseState = state => element('diagram').handlers.click({type:'click',target:{closest:()=>({dataset:{node:String(state)}})},preventDefault(){}});
+const tick = () => { assert.equal(timers.size,1); const [id,timer]=timers.entries().next().value; timers.delete(id); timer.fn(); };
+chooseState(0);
+assert.match(element('display-state').textContent,/decimal 0/);
+for(const state of [10,11,13,15,0]) { tick(); assert.equal(vm.runInContext('selectedState',context),state); }
+element('play-pause').handlers.click(); assert.equal(timers.size,0);
+assert.equal(element('clock-status').textContent,'Pausado');
+element('clock-step').handlers.click(); assert.equal(vm.runInContext('selectedState',context),10); assert.equal(timers.size,0);
+chooseState(13); assert.equal(timers.size,1); assert.match(element('display-state').textContent,/^d/);
+tick(); assert.equal(vm.runInContext('selectedState',context),15);
+element('clock-speed').handlers.change({target:{value:'500'}}); assert.equal(timers.size,1); assert.equal(timers.values().next().value.delay,500);
+const patterns = ['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg','abcefg','cdefg','adef','bcdeg','adefg','aefg'];
+for(let state=0;state<16;state++) {
+  chooseState(state);
+  const lit = Array.from(element('seven-segment').innerHTML.matchAll(/data-segment="([a-g])" class="segment lit"/g),m=>m[1]).sort().join('');
+  assert.equal(lit,patterns[state]);
+  assert.equal((element('seven-segment').innerHTML.match(/<polygon/g)||[]).length,7);
+}
+chooseState(14); tick(); assert.equal(vm.runInContext('selectedState',context),14); // self-loop
+// A new bit width clamps the current state and schedules only one timer.
+element('bits').handlers.change({target:{value:'1'}});
+assert(vm.runInContext('selectedState < 2',context)); assert.equal(timers.size,1);
+element('play-pause').handlers.click(); assert.equal(timers.size,0);
+// Excitation columns follow bit order and the standard JK excitation table.
+for(let bits=1;bits<=4;bits++) for(const flipFlop of ['D','JK']) {
+  const nextBits=Array.from({length:2**bits},(_,state)=>Array.from({length:bits},(_,bit)=>(state+bit)%3-1));
+  tool.execute({bits,flipFlop,nextBits});
+  const cells=Array.from(element('transition-table').innerHTML.matchAll(/data-excitation="([DJK][a-d])" data-row="(\d+)"[^>]*>(.*?)<\/td>/g));
+  const names=Array.from({length:bits},(_,i)=>'abcd'[bits-i-1]).flatMap(letter=>(flipFlop==='JK'?['J','K']:['D']).map(pin=>pin+letter));
+  assert.deepEqual(cells.filter(m=>m[2]==='0').map(m=>m[1]),names);
+  assert.equal(cells.length,2**bits*names.length);
+  for(const [,name,row,html] of cells) {
+    const state=Number(row), bit='abcd'.indexOf(name[1]), q=L.bit(state,bit), next=nextBits[state][bit];
+    const expected=next===-1 ? -1 : name[0]==='D' ? next : name[0]==='J' ? (q===0?next:-1) : (q===1?1-next:-1);
+    if(expected===-1) assert.match(html,/^X<sub>[01]<\/sub>$/); else assert.equal(html,String(expected));
+    const eq=vm.runInContext('result.equations',context).find(e=>e.name===name);
+    if(expected===-1) assert.equal(Number(html.match(/<sub>([01])/)[1]),L.evaluate(eq.terms,state));
+  }
+}
+for(const [zeroNext,oneNext] of [[0,0],[0,1],[1,0],[1,1]]) {
+  tool.execute({bits:1,flipFlop:'JK',nextBits:[[zeroNext],[oneNext]]});
+  const values=Object.fromEntries(Array.from(element('transition-table').innerHTML.matchAll(/data-excitation="([JK]a)" data-row="([01])"[^>]*>(.*?)<\/td>/g),m=>[m[1]+m[2],m[3][0]]));
+  assert.equal(values.Ja0,String(zeroNext)); assert.equal(values.Ka0,'X');
+  assert.equal(values.Ja1,'X'); assert.equal(values.Ka1,String(1-oneNext));
+}
+console.log(`OK: ${checked} funções com mínimo conferido por algoritmo independente; 1.600 contadores aleatórios; contagem binária, indiferenças, controles, grupos do mapa, simulação do clock, 16 dígitos de sete segmentos e contrato WebMCP.`);
