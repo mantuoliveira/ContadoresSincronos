@@ -134,7 +134,7 @@ tool.execute({bits:4,flipFlop:'D',nextBits:custom});
 const chooseState = state => element('diagram').handlers.click({type:'click',target:{closest:()=>({dataset:{node:String(state)}})},preventDefault(){}});
 const tick = () => { assert.equal(timers.size,1); const [id,timer]=timers.entries().next().value; timers.delete(id); timer.fn(); };
 chooseState(0);
-assert.match(element('display-state').textContent,/decimal 0/);
+assert.equal(element('display-state').textContent,'0₁₆ · 0₁₀ · 0000₂');
 for(const state of [10,11,13,15,0]) { tick(); assert.equal(vm.runInContext('selectedState',context),state); }
 element('play-pause').handlers.click(); assert.equal(timers.size,0);
 assert.equal(element('clock-status').textContent,'Pausado');

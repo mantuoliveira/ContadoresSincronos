@@ -106,9 +106,7 @@ const segmentShapes = {
 function renderDisplay() {
   const digit = hexDigits[selectedState], mask = segmentMasks[selectedState];
   $('seven-segment').innerHTML = `<svg viewBox="0 0 100 180" role="img" aria-label="Display: ${digit}, estado decimal ${selectedState}">${Object.entries(segmentShapes).map(([name,points]) => `<polygon data-segment="${name}" class="segment ${mask.includes(name) ? 'lit' : ''}" points="${points}"/>`).join('')}</svg>`;
-  $('display-state').textContent = `${digit} · decimal ${selectedState} · ${binary(selectedState)}₂`;
-  const next = result.nextStates[selectedState];
-  $('display-next').textContent = `Próximo: ${hexDigits[next]} (${next})${next === selectedState ? ' · permanece neste estado' : ''}`;
+  $('display-state').textContent = `${digit}₁₆ · ${selectedState}₁₀ · ${binary(selectedState)}₂`;
   $('clock-status').textContent = clockRunning ? 'Em execução' : 'Pausado';
   $('play-pause').textContent = clockRunning ? 'Pausar' : 'Continuar';
 }
