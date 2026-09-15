@@ -31,7 +31,9 @@ function renderTable() {
   }).join('')}</tr>`).join('')}</tbody></table>`;
   $('excitation-note').textContent = type === 'JK'
     ? 'JK (J, K): 0 → 0 = (0, X) · 0 → 1 = (1, X) · 1 → 0 = (X, 1) · 1 → 1 = (X, 0).'
-    : 'Flip-flop D: a entrada D é igual ao próximo valor de Q.';
+    : type === 'T'
+      ? 'Flip-flop T: manter o estado exige T = 0; alternar o estado exige T = 1 (T = Q ⊕ Q⁺).'
+      : 'Flip-flop D: a entrada D é igual ao próximo valor de Q.';
 }
 function renderEquations() {
   $('equations').innerHTML = result.equations.map(e => `<div class="equation ${e.name === selected ? 'active' : ''}" data-equation="${e.name}"><button class="equation-name equation-picker" data-equation="${e.name}" aria-pressed="${e.name === selected}" aria-label="Ver mapa de ${e.name}">${pinLabel(e.name)} =</button><span class="formula">${e.terms.length ? e.terms.map((t,i) => `<button class="formula-term ${e.name === selected && i === selectedTerm ? 'active' : ''}" data-equation-term="${i}" data-entry="${e.name}" aria-pressed="${e.name === selected && i === selectedTerm}" aria-label="Destacar ${L.termText(t)} no mapa de ${e.name}">${L.termText(t)}</button>`).join(' + ') : `<button class="formula-term" data-equation="${e.name}" aria-label="Ver mapa de ${e.name}, constante zero">0</button>`}</span></div>`).join('');
@@ -187,10 +189,10 @@ if (document.modelContext?.registerTool) {
   try { Promise.resolve(document.modelContext.registerTool({
     name:'configure_counter', title:'Configurar contador síncrono',
     description:'Substitui a tabela visível e calcula equações, mapas e transições. Cada linha usa ordem Qa, Qb, Qc, Qd; -1 representa X.',
-    inputSchema:{type:'object', properties:{bits:{type:'integer',minimum:1,maximum:4},flipFlop:{type:'string',enum:['D','JK']},nextBits:{type:'array',items:{type:'array',items:{type:'integer',enum:[-1,0,1]}}}},required:['bits','flipFlop','nextBits'],additionalProperties:false},
+    inputSchema:{type:'object', properties:{bits:{type:'integer',minimum:1,maximum:4},flipFlop:{type:'string',enum:['D','JK','T']},nextBits:{type:'array',items:{type:'array',items:{type:'integer',enum:[-1,0,1]}}}},required:['bits','flipFlop','nextBits'],additionalProperties:false},
     annotations:{readOnlyHint:false,untrustedContentHint:false},
     execute(input) {
-      if (!input || !Number.isInteger(input.bits) || input.bits < 1 || input.bits > 4 || !['D','JK'].includes(input.flipFlop) || !Array.isArray(input.nextBits) || input.nextBits.length !== 2 ** input.bits || !input.nextBits.every(row => Array.isArray(row) && row.length === input.bits && row.every(v => [-1,0,1].includes(v)))) throw new Error('Tabela inválida. Informe 2^bits linhas, cada uma com bits valores 0, 1 ou -1.');
+      if (!input || !Number.isInteger(input.bits) || input.bits < 1 || input.bits > 4 || !['D','JK','T'].includes(input.flipFlop) || !Array.isArray(input.nextBits) || input.nextBits.length !== 2 ** input.bits || !input.nextBits.every(row => Array.isArray(row) && row.length === input.bits && row.every(v => [-1,0,1].includes(v)))) throw new Error('Tabela inválida. Informe 2^bits linhas, cada uma com bits valores 0, 1 ou -1.');
       drafts.set(n,table.map(row => [...row])); n = input.bits; type = input.flipFlop; table = input.nextBits.map(row => [...row]); selectedTerm = -1;
       $('bits').value = String(n); $('type').value = type; compute();
       return {equations:result.equations.map(e => ({name:e.name,expression:e.text})),nextStates:result.nextStates};

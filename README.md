@@ -4,10 +4,10 @@ Abra **index.html** no navegador. Não há instalação, dependências, build, f
 
 ## Uso
 
-- Selecione 1 a 4 bits e flip-flops D ou JK. Qa é sempre o menos significativo. A tabela e os rótulos binários mostram o mais significativo à esquerda.
+- Selecione 1 a 4 bits e flip-flops D, JK ou T. Qa é sempre o menos significativo. A tabela e os rótulos binários mostram o mais significativo à esquerda.
 - Clique nos bits do próximo estado para alternar 0 → 1 → X → 0. Os botões também respondem a Tab, Enter e Espaço.
 - X₀ e X₁ mantêm a especificação indiferente e mostram o resultado efetivo do circuito. A escolha pode mudar ao editar outras células ou trocar o tipo de flip-flop.
-- O terceiro bloco da tabela exibe as entradas dos flip-flops, calculadas automaticamente. Para JK de 3 bits: Jc, Kc, Jb, Kb, Ja, Ka; para D: Dc, Db, Da. Cada X mantém a indiferença da tabela de excitação, com o valor efetivo da equação em subescrito. Um próximo estado livre deixa as respectivas entradas livres para a minimização.
+- O terceiro bloco da tabela exibe as entradas dos flip-flops, calculadas automaticamente. Para JK de 3 bits: Jc, Kc, Jb, Kb, Ja, Ka; para D: Dc, Db, Da; para T: Tc, Tb, Ta. Cada X mantém a indiferença da tabela de excitação, com o valor efetivo da equação em subescrito. Um próximo estado livre deixa as respectivas entradas livres para a minimização.
 - Selecione uma equação para abrir seu mapa de Karnaugh. Clique diretamente em um termo da equação ou no botão correspondente abaixo do mapa para destacar suas células em verde escuro; a ordem Gray preserva a adjacência, inclusive entre bordas opostas.
 - No mapa, X é uma indiferença de **excitação**: pode vir do próximo estado livre ou da própria tabela JK. O subescrito indica o valor da entrada, não necessariamente o próximo Q.
 - Também é possível clicar diretamente nas células do mapa. Se a célula pertence a vários termos, cliques sucessivos percorrem esses grupos e depois removem o destaque. Uma célula sem grupo exibe essa informação.
@@ -21,7 +21,7 @@ Abra **index.html** no navegador. Não há instalação, dependências, build, f
 
 O algoritmo enumera os cubos válidos de até quatro variáveis, extrai os implicantes primos e resolve a cobertura exata dos mintermos obrigatórios com memoização. Minimiza primeiro o número de termos da soma de produtos e depois o total de literais, **por entrada**, sem otimização de portas compartilhadas. Empates têm escolha determinística; podem existir outras soluções igualmente mínimas. Uma função inteiramente indiferente é escolhida como 0.
 
-Para D, D = Q⁺. Para JK, 0→0 exige J=0; 0→1 exige J=1; 1→0 exige K=1; 1→1 exige K=0; a outra entrada é indiferente. Os próximos estados resolvidos são calculados por Q⁺ = J·¬Q + ¬K·Q, nunca por escolhas independentes na tabela. Não são modelados atrasos, glitches ou restrições elétricas.
+Para D, D = Q⁺. Para JK, 0→0 exige J=0; 0→1 exige J=1; 1→0 exige K=1; 1→1 exige K=0; a outra entrada é indiferente. Para T, manter o estado exige T=0 e alterná-lo exige T=1, portanto T = Q ⊕ Q⁺. Os próximos estados resolvidos são calculados pelas equações características: Q⁺ = D, Q⁺ = J·¬Q + ¬K·Q ou Q⁺ = Q ⊕ T. Não são modelados atrasos, glitches ou restrições elétricas.
 
 ## Validação de desenvolvimento
 

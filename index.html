@@ -2,15 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Projete contadores síncronos com flip-flops D e JK, equações mínimas, mapas de Karnaugh e diagrama de estados.">
+  <meta name="description" content="Projete contadores síncronos com flip-flops D, JK e T, equações mínimas, mapas de Karnaugh e diagrama de estados.">
   <title>Contador síncrono — Sistemas Digitais I</title>
-  <link rel="stylesheet" href="style.css?v=8">
-  <script defer src="logic.js?v=8"></script><script defer src="app.js?v=8"></script>
+  <link rel="stylesheet" href="style.css?v=9">
+  <script defer src="logic.js?v=9"></script><script defer src="app.js?v=9"></script>
 </head>
 <body>
 <header><div class="brand"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 23H8V9H16V23H24V9H29" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><div><h1 class="brand-title">Contador síncrono<span class="dot">.</span></h1><span class="eyebrow">SISTEMAS DIGITAIS I</span></div></div></header>
 <main>
-  <section class="toolbar" aria-label="Configuração"><label>Quantidade de bits<select id="bits"><option value="1">1 bit · 2 estados</option><option value="2">2 bits · 4 estados</option><option value="3" selected>3 bits · 8 estados</option><option value="4">4 bits · 16 estados</option></select></label><label>Flip-flop<select id="type"><option value="D">D</option><option value="JK" selected>JK</option></select></label><div class="order"><span id="order"></span></div><button id="example" class="secondary">Exemplo módulo 6</button><button id="clear" class="secondary">Todos os bits em X</button></section>
+  <section class="toolbar" aria-label="Configuração"><label>Quantidade de bits<select id="bits"><option value="1">1 bit · 2 estados</option><option value="2">2 bits · 4 estados</option><option value="3" selected>3 bits · 8 estados</option><option value="4">4 bits · 16 estados</option></select></label><label>Flip-flop<select id="type"><option value="D">D</option><option value="JK" selected>JK</option><option value="T">T</option></select></label><div class="order"><span id="order"></span></div><button id="example" class="secondary">Exemplo módulo 6</button><button id="clear" class="secondary">Todos os bits em X</button></section>
   <div class="workspace">
     <section class="card table-card"><div class="section-title"><div><span class="step">01</span><h2>Tabela de transição</h2></div><span id="state-count" class="tag"></span></div><p class="hint">Clique no próximo bit: <strong>0 → 1 → X → 0</strong></p><div class="table-wrap" id="transition-table"></div><div class="table-foot"><span class="x-sample">X<sub>0</sub></span><p>O subescrito mostra o valor escolhido pelas equações. Nas entradas dos flip-flops, X indica uma excitação livre; o subescrito é a saída efetiva do circuito combinacional.</p></div><p id="excitation-note" class="excitation-note"></p></section>
     <div class="results"><section class="card"><div class="section-title"><div><span class="step">02</span><h2>Equações de excitação</h2></div><span class="tag">Soma de produtos</span></div><p class="hint">Selecione uma equação para explorar seu mapa.</p><div id="equations" class="equations"></div></section>

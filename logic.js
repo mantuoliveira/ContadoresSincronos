@@ -42,11 +42,15 @@
   const termText = cube => cube.map((v, i) => v === -1 ? '' : (v === 0 ? '¬' : '') + names[i]).filter(Boolean).join('·') || '1';
   const expression = terms => terms.map(termText).join(' + ') || '0';
   function synthesize(table, n, type) {
+    const pins = {D:['D'], JK:['J', 'K'], T:['T']}[type];
+    if (!pins) throw new Error('Tipo de flip-flop inválido.');
     const equations = [];
-    for (let i = 0; i < n; i++) for (const pin of type === 'JK' ? ['J', 'K'] : ['D']) {
+    for (let i = 0; i < n; i++) for (const pin of pins) {
       const values = table.map((row, s) => {
         const next = row[i], q = bit(s, i);
-        if (next === -1 || (pin === 'J' && q === 1) || (pin === 'K' && q === 0)) return -1;
+        if (next === -1) return -1;
+        if (pin === 'T') return q ^ next;
+        if ((pin === 'J' && q === 1) || (pin === 'K' && q === 0)) return -1;
         return pin === 'K' ? 1 - next : next;
       });
       const terms = minimize(values, n);
@@ -56,7 +60,8 @@
       let next = 0;
       for (let i = 0; i < n; i++) {
         const eq = equations.filter(e => e.bit === i);
-        const value = type === 'D' ? evaluate(eq[0].terms, s) : bit(s, i) ? 1 - evaluate(eq[1].terms, s) : evaluate(eq[0].terms, s);
+        const input = evaluate(eq[0].terms, s);
+        const value = type === 'D' ? input : type === 'T' ? bit(s, i) ^ input : bit(s, i) ? 1 - evaluate(eq[1].terms, s) : input;
         next |= value << i;
       }
       return next;

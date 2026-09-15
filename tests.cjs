@@ -30,18 +30,19 @@ for (let n = 1; n <= 3; n++) for (let code = 0; code < 3 ** (2 ** n); code++) {
 let seed = 42017;
 const random = () => { seed = (Math.imul(seed,1664525) + 1013904223) >>> 0; return seed / 2 ** 32; };
 for (let trial = 0; trial < 300; trial++) checkFunction(Array.from({length:16},()=>Math.floor(random()*3)-1),4,true);
-for (let n = 1; n <= 4; n++) for (const type of ['D','JK']) {
+for (let n = 1; n <= 4; n++) for (const type of ['D','JK','T']) {
   for (let trial = 0; trial < 200; trial++) {
     const table = Array.from({length:2 ** n}, () => Array.from({length:n}, () => Math.floor(random()*3)-1));
     const result = L.synthesize(table,n,type);
     table.forEach((row,s) => row.forEach((v,i) => { if(v !== -1) assert.equal(L.bit(result.nextStates[s],i),v); }));
-    assert.equal(result.equations.length,n*(type === 'D' ? 1 : 2));
+    assert.equal(result.equations.length,n*(type === 'JK' ? 2 : 1));
   }
   const count = Array.from({length:2 ** n}, (_,s) => Array.from({length:n},(_,i) => L.bit((s+1)%(2**n),i)));
   assert.deepEqual(L.synthesize(count,n,type).nextStates, count.map((_,s)=>(s+1)%(2**n)));
   const free = Array.from({length:2 ** n},()=>Array(n).fill(-1));
   assert.deepEqual(L.synthesize(free,n,type).nextStates,free.map((_,s)=>type === 'D' ? 0 : s));
 }
+assert.throws(() => L.synthesize([[0]],1,'SR'), /inválido/);
 // Exercise the same event handlers as the UI without a browser or dependencies.
 const elements = new Map(), registrations = [];
 const timers = new Map(); let timerId = 0;
@@ -52,7 +53,7 @@ assert.equal(registrations.length,1);
 const tool = registrations[0];
 assert.equal(tool.name,'configure_counter');
 assert.equal(tool.annotations.readOnlyHint,false);
-for (let bits=1;bits<=4;bits++) for(const flipFlop of ['D','JK']) {
+for (let bits=1;bits<=4;bits++) for(const flipFlop of ['D','JK','T']) {
   const nextBits = Array.from({length:2**bits},(_,s)=>Array.from({length:bits},(_,i)=>L.bit((s+1)%(2**bits),i)));
   const result = tool.execute({bits,flipFlop,nextBits});
   assert.deepEqual(Array.from(result.nextStates),nextBits.map((_,s)=>(s+1)%(2**bits)));
@@ -90,7 +91,7 @@ for (let bits=1;bits<=4;bits++) {
     if(cols>1) assert(oneBit(layout.states[r][c]^layout.states[r][(c+1)%cols]));
   }
 }
-for (const flipFlop of ['D','JK']) {
+for (const flipFlop of ['D','JK','T']) {
   element('bits').handlers.change({target:{value:'4'}});
   element('type').handlers.change({target:{value:flipFlop}});
   element('example').handlers.click();
@@ -154,17 +155,17 @@ chooseState(14); tick(); assert.equal(vm.runInContext('selectedState',context),1
 element('bits').handlers.change({target:{value:'1'}});
 assert(vm.runInContext('selectedState < 2',context)); assert.equal(timers.size,1);
 element('play-pause').handlers.click(); assert.equal(timers.size,0);
-// Excitation columns follow bit order and the standard JK excitation table.
-for(let bits=1;bits<=4;bits++) for(const flipFlop of ['D','JK']) {
+// Excitation columns follow bit order and each flip-flop's excitation table.
+for(let bits=1;bits<=4;bits++) for(const flipFlop of ['D','JK','T']) {
   const nextBits=Array.from({length:2**bits},(_,state)=>Array.from({length:bits},(_,bit)=>(state+bit)%3-1));
   tool.execute({bits,flipFlop,nextBits});
-  const cells=Array.from(element('transition-table').innerHTML.matchAll(/data-excitation="([DJK][a-d])" data-row="(\d+)"[^>]*>(.*?)<\/td>/g));
-  const names=Array.from({length:bits},(_,i)=>'abcd'[bits-i-1]).flatMap(letter=>(flipFlop==='JK'?['J','K']:['D']).map(pin=>pin+letter));
+  const cells=Array.from(element('transition-table').innerHTML.matchAll(/data-excitation="([DJKT][a-d])" data-row="(\d+)"[^>]*>(.*?)<\/td>/g));
+  const names=Array.from({length:bits},(_,i)=>'abcd'[bits-i-1]).flatMap(letter=>(flipFlop==='JK'?['J','K']:[flipFlop]).map(pin=>pin+letter));
   assert.deepEqual(cells.filter(m=>m[2]==='0').map(m=>m[1]),names);
   assert.equal(cells.length,2**bits*names.length);
   for(const [,name,row,html] of cells) {
     const state=Number(row), bit='abcd'.indexOf(name[1]), q=L.bit(state,bit), next=nextBits[state][bit];
-    const expected=next===-1 ? -1 : name[0]==='D' ? next : name[0]==='J' ? (q===0?next:-1) : (q===1?1-next:-1);
+    const expected=next===-1 ? -1 : name[0]==='D' ? next : name[0]==='T' ? q^next : name[0]==='J' ? (q===0?next:-1) : (q===1?1-next:-1);
     if(expected===-1) assert.match(html,/^X<sub>[01]<\/sub>$/); else assert.equal(html,String(expected));
     const eq=vm.runInContext('result.equations',context).find(e=>e.name===name);
     if(expected===-1) assert.equal(Number(html.match(/<sub>([01])/)[1]),L.evaluate(eq.terms,state));
@@ -176,4 +177,9 @@ for(const [zeroNext,oneNext] of [[0,0],[0,1],[1,0],[1,1]]) {
   assert.equal(values.Ja0,String(zeroNext)); assert.equal(values.Ka0,'X');
   assert.equal(values.Ja1,'X'); assert.equal(values.Ka1,String(1-oneNext));
 }
-console.log(`OK: ${checked} funções com mínimo conferido por algoritmo independente; 1.600 contadores aleatórios; contagem binária, indiferenças, controles, grupos do mapa, simulação do clock, 16 dígitos de sete segmentos e contrato WebMCP.`);
+for(const [zeroNext,oneNext] of [[0,0],[0,1],[1,0],[1,1]]) {
+  tool.execute({bits:1,flipFlop:'T',nextBits:[[zeroNext],[oneNext]]});
+  const values=Object.fromEntries(Array.from(element('transition-table').innerHTML.matchAll(/data-excitation="(Ta)" data-row="([01])"[^>]*>(.*?)<\/td>/g),m=>[m[1]+m[2],m[3][0]]));
+  assert.equal(values.Ta0,String(zeroNext)); assert.equal(values.Ta1,String(1-oneNext));
+}
+console.log(`OK: ${checked} funções com mínimo conferido por algoritmo independente; 2.400 contadores aleatórios; contagem binária, indiferenças, controles, grupos do mapa, simulação do clock, 16 dígitos de sete segmentos e contrato WebMCP.`);
